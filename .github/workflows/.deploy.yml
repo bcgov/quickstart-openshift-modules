@@ -88,8 +88,8 @@ jobs:
         name: Deploy Crunchy
         id: deploy_crunchy
         with:
-          oc_namespace: ${{ secrets.OC_NAMESPACE }}
-          oc_token: ${{ secrets.OC_TOKEN }}
+          oc_namespace: ${{ secrets.oc_namespace }}
+          oc_token: ${{ secrets.oc_token }}
           environment: ${{ inputs.environment }}
           values_file: charts/crunchy/values.yml
           triggers: ${{ inputs.triggers }}
