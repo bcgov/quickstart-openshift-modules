@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 permissions: {}
 jobs:
-  # https://github.com/bcgov/action-builder-ghcr
+  # https://github.com/bcgov/actions/tree/main/builder
   builds:
     name: Builds
     permissions:
@@ -34,7 +34,7 @@ jobs:
             build_context: ./backend-py/db
             build_file: ./backend-py/db/Dockerfile
     steps:
-      - uses: bcgov/action-builder-ghcr@cb2629351c87dd1c2130073e4ebb7233a9653a63 # v4.4.1
+      - uses: bcgov/actions/builder@6763b12e9c5e7548fe0e63a63e16fe01f0f33b91 # v0.7.0
         id: builds
         with:
           build_context: ${{ matrix.build_context }}
@@ -62,6 +62,7 @@ jobs:
     if: always()
     runs-on: ubuntu-24.04
     steps:
-      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
-        run: echo "At least one job has failed or was cancelled." && exit 1
-      - run: echo "Success!"
+      - uses: bcgov/actions/workflow-results@6763b12e9c5e7548fe0e63a63e16fe01f0f33b91 # v0.7.0
+        with:
+          needs: ${{ toJson(needs) }}
+          title: "PR Results"
