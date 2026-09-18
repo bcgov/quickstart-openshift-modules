@@ -11,14 +11,17 @@ permissions: {}
 jobs:
   validate:
     name: Validate PR
+    if: (! github.event.pull_request.draft)
+    runs-on: ubuntu-24.04
     permissions:
       contents: read          # Required for repository access
       pull-requests: write    # Required for commenting on PRs
-    uses: bcgov/quickstart-openshift-helpers/.github/workflows/.pr-validate.yml@a11ad3d1b9288fb40757c4314a62eb86ff227931 # v1.2.1
-    with:
-      markdown_links: |
-        - [Java](https://${{ github.event.repository.name }}-${{ github.event.number }}-backend-java.apps.silver.devops.gov.bc.ca)
-        - [Py](https://${{ github.event.repository.name }}-${{ github.event.number }}-backend-py.apps.silver.devops.gov.bc.ca)
+    steps:
+      - uses: bcgov/actions/pr-validate@6763b12e9c5e7548fe0e63a63e16fe01f0f33b91 # v0.7.0
+        with:
+          add_markdown: |
+            - [Java](https://${{ github.event.repository.name }}-${{ github.event.number }}-backend-java.apps.silver.devops.gov.bc.ca)
+            - [Py](https://${{ github.event.repository.name }}-${{ github.event.number }}-backend-py.apps.silver.devops.gov.bc.ca)
 
   results:
     name: Validate Results
@@ -26,6 +29,7 @@ jobs:
     needs: [validate]
     runs-on: ubuntu-24.04
     steps:
-      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
-        run: echo "Validation failed or was cancelled." && exit 1
-      - run: echo "Success!"
+      - uses: bcgov/actions/workflow-results@6763b12e9c5e7548fe0e63a63e16fe01f0f33b91 # v0.7.0
+        with:
+          needs: ${{ toJson(needs) }}
+          title: "Validate Results"
