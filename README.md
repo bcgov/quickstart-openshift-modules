@@ -1,30 +1,27 @@
-[![MIT License](https://img.shields.io/github/license/bcgov/quickstart-openshift-backends.svg)](/LICENSE.md)
+[![MIT License](https://img.shields.io/github/license/bcgov/quickstart-openshift-modules.svg)](/LICENSE)
 [![Lifecycle](https://img.shields.io/badge/Lifecycle-Experimental-339999)](https://github.com/bcgov/repomountie/blob/master/doc/lifecycle-badges.md)
-[![Merge](https://github.com/bcgov/quickstart-openshift-backends/actions/workflows/merge.yml/badge.svg)](https://github.com/bcgov/quickstart-openshift-backends/actions/workflows/merge.yml)
-[![Analysis](https://github.com/bcgov/quickstart-openshift-backends/actions/workflows/analysis.yml/badge.svg)](https://github.com/bcgov/quickstart-openshift-backends/actions/workflows/analysis.yml)
+[![Merge](https://github.com/bcgov/quickstart-openshift-modules/actions/workflows/merge.yml/badge.svg)](https://github.com/bcgov/quickstart-openshift-modules/actions/workflows/merge.yml)
+[![Analysis](https://github.com/bcgov/quickstart-openshift-modules/actions/workflows/analysis.yml/badge.svg)](https://github.com/bcgov/quickstart-openshift-modules/actions/workflows/analysis.yml)
 
-# QuickStart: Pluggable Backends
+# QuickStart: OpenShift Modules
 
-## OpenShift, Java, Python
+Modular plug-ins for the [QuickStart for OpenShift](https://github.com/bcgov/quickstart-openshift) ecosystem. These modules provide alternative backend implementations designed to be stamped by Backstage software templates or overlaid directly into a target `quickstart-openshift` repository.
 
-These are pluggable backends intended for use with the [QuickStart for Openshift](https://github.com/bcgov/quickstart-openshift), which defaults to JavaScript/TypeScripts.  They follow the same patterns and can be copied over.
+## Available Modules
 
-* Pluggable backends:
-    * Backend: Java, Quarkus, Cloud Native
-    * Backend: Python, FastAPI
+* **Java Backend (`backend-java`)**: Cloud Native Java with [Quarkus](https://quarkus.io/) compiled to native binary with GraalVM. Features embedded [Flyway](https://flywaydb.org/) migrations run at startup and modern OpenShift deployment templates.
+* **Python Backend (`backend-py`)**: High-performance backend built with [FastAPI](https://fastapi.tiangolo.com/).
 
-# Sample Application
+## Integration
 
-The starter stack includes a (React, MUI, Vite, Caddy) frontend, Pluggable backend(Nest/Node, Quarkus/Java On Native, FastAPI/Python) and postgres database.  See subfolder for source, including Dockerfiles and OpenShift templates.
+When scaffolding with Backstage or manually swapping backends in `quickstart-openshift`, the chosen module (e.g., `backend-java/`) maps to the `backend/` directory of the target project, providing its source code, Dockerfile, and OpenShift deployment template (`openshift.deploy.yml`).
 
-Features:
-* [TypeScript](https://www.typescriptlang.org/) strong-typing for JavaScript
-* [NestJS](https://docs.nestjs.com) Nest/Node backend
-* [Quarkus](https://quarkus.io/) Quarkus/Java On Native backend
-* [FastAPI](https://fastapi.tiangolo.com/) FastAPI/Python backend
-* [Postgres](https://www.postgresql.org/) or [PostGIS](https://postgis.net/) database
-* [backup-container](https://github.com/BCDevOps/backup-container) provided by BCDevOps
+## Features
 
-# Acknowledgements
+* Cloud Native Java with Quarkus and GraalVM native images for minimal resource footprints
+* Modern OpenShift deployment manifests (`Deployment`, `Service`, `Route`, `NetworkPolicy`, `HorizontalPodAutoscaler`, `PodDisruptionBudget`)
+* Automated database migration and connectivity with PostgreSQL (`${NAME}-${ZONE}-database`)
 
-This Action is provided courtesy of the Forestry Suite of Applications, part of the Government of British Columbia.
+## Acknowledgements
+
+This repository is maintained by the Forestry Suite of Applications, part of the Government of British Columbia.
