@@ -1,0 +1,156 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+parameters:
+  - name: NAME
+    description: Product name
+    required: true
+  - name: COMPONENT
+    description: Component name
+    value: database
+  - name: ZONE
+    description: Deployment zone, e.g. pr-### or prod
+    required: true
+  - name: PG_VERSION
+    description: PostgreSQL version tag for the Docker Hub postgres image
+    value: "17"
+  - name: DB_PVC_SIZE
+    description: Volume space available for data
+    value: 256Mi
+  - name: MEMORY_LIMIT
+    description: Memory limit for the database container (bounds the pod's working set).
+    value: 4Gi
+
+objects:
+  - apiVersion: apps/v1
+    kind: StatefulSet
+    metadata:
+      labels:
+        app: ${NAME}-${ZONE}
+      name: ${NAME}-${ZONE}-${COMPONENT}
+    spec:
+      # Governing Service required by the StatefulSet. With a single replica the
+      # ClusterIP Service below doubles as both the governing service and the
+      # connection endpoint; no separate headless Service is needed.
+      serviceName: ${NAME}-${ZONE}-${COMPONENT}
+      replicas: 1
+      selector:
+        matchLabels:
+          deployment: ${NAME}-${ZONE}-${COMPONENT}
+      template:
+        metadata:
+          labels:
+            app: ${NAME}-${ZONE}
+            deployment: ${NAME}-${ZONE}-${COMPONENT}
+        spec:
+          # Give Postgres time to flush and shut down cleanly on SIGTERM during a node drain.
+          terminationGracePeriodSeconds: 60
+          containers:
+            - name: ${NAME}-${ZONE}
+              image: postgres:${PG_VERSION}
+              imagePullPolicy: Always
+              ports:
+                - containerPort: 5432
+              env:
+                - name: PGDATA
+                  value: /var/lib/postgresql/data/pgdata
+                - name: POSTGRES_DB
+                  valueFrom:
+                    secretKeyRef:
+                      name: ${NAME}-${ZONE}-database
+                      key: database-name
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: ${NAME}-${ZONE}-database
+                      key: database-password
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: ${NAME}-${ZONE}-database
+                      key: database-user
+
+              volumeMounts:
+                - name: data
+                  mountPath: /var/lib/postgresql/data
+                - name: socket-dir
+                  mountPath: /var/run/postgresql
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 256Mi
+                limits:
+                  memory: ${MEMORY_LIMIT}
+              # restricted-v2 SCC hardening. readOnlyRootFilesystem is intentionally
+              # omitted: the postgres entrypoint writes to several root-fs paths
+              # (config, locale, /tmp) beyond the PVC and socket-dir mounts.
+              # OpenShift assigns the UID/GID from the namespace range; do not hard-code it.
+              securityContext:
+                allowPrivilegeEscalation: false
+                runAsNonRoot: true
+                capabilities:
+                  drop: ["ALL"]
+                seccompProfile:
+                  type: RuntimeDefault
+              readinessProbe:
+                exec:
+                  command:
+                    - pg_isready
+                    - -d
+                    - $(POSTGRES_DB)
+                    - -U
+                    - $(POSTGRES_USER)
+                successThreshold: 1
+                failureThreshold: 5
+                initialDelaySeconds: 15
+                periodSeconds: 15
+                timeoutSeconds: 10
+              livenessProbe:
+                exec:
+                  command:
+                    - pg_isready
+                    - -d
+                    - $(POSTGRES_DB)
+                    - -U
+                    - $(POSTGRES_USER)
+                successThreshold: 1
+                failureThreshold: 5
+                initialDelaySeconds: 30
+                periodSeconds: 15
+                timeoutSeconds: 10
+          volumes:
+            - name: socket-dir
+              emptyDir: {}
+      # Per-pod PVC managed by the StatefulSet. The claim-template name is fixed
+      # ("data"): volumeClaimTemplates are immutable once the StatefulSet exists,
+      # so the name must not embed PG_VERSION. A major Postgres upgrade is a
+      # deliberate migration (pg_upgrade or dump/restore), never an automatic
+      # volume swap. netapp-block-standard (RWO block) suits a single-writer DB
+      # and supports resize-up only.
+      volumeClaimTemplates:
+        - metadata:
+            labels:
+              app: ${NAME}-${ZONE}
+            name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: netapp-block-standard
+            resources:
+              requests:
+                storage: ${DB_PVC_SIZE}
+  # ClusterIP Service: backends connect here via ${NAME}-${ZONE}-${COMPONENT}:5432.
+  # A stable virtual IP is the right choice for a single-replica DB; per-pod
+  # (headless) DNS would only matter for a multi-replica HA cluster.
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        app: ${NAME}-${ZONE}
+      name: ${NAME}-${ZONE}-${COMPONENT}
+    spec:
+      ports:
+        - name: postgresql
+          port: 5432
+          targetPort: 5432
+      selector:
+        deployment: ${NAME}-${ZONE}-${COMPONENT}

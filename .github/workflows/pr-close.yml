@@ -9,30 +9,19 @@ concurrency:
   # PR open and close use the same group, allowing only one at a time
   group: pr-${{ github.workflow }}-${{ github.event.number }}
   cancel-in-progress: true
+
 permissions: {}
+
 jobs:
   cleanup:
-    name: Cleanup OpenShift and/or Promote Images
+    name: Cleanup OpenShift and Promote Images
     permissions:
-      packages: write  # Required for promoting images during PR cleanup
-      contents: read   # Required for repository access
+      packages: write # Required for promoting images during PR cleanup
+      contents: read # Required for repository access
     uses: bcgov/actions-openshift/.github/workflows/.pr-close.yml@75454b2b33edf37135f6f167775c77a3414207f6 # v0.3.0
     secrets:
       oc_namespace: ${{ vars.OC_NAMESPACE }}
       oc_token: ${{ secrets.OC_TOKEN }}
     with:
-      cleanup: helm
+      cleanup: label
       packages: backend-java backend-py migrations-py
-  cleanup_db: # TODO move it off to another action later.
-    name: Remove DB User from Crunchy
-    permissions:
-      contents: read  # Required to read values_file from repository
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: bcgov/actions-openshift/crunchy@75454b2b33edf37135f6f167775c77a3414207f6 # v0.3.0
-        name: Remove PR Specific User
-        with:
-          oc_namespace: ${{ vars.oc_namespace }}
-          oc_token: ${{ secrets.oc_token }}
-          oc_server: ${{ vars.oc_server }}
-          values_file: charts/crunchy/values.yml

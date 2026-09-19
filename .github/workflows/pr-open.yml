@@ -8,7 +8,9 @@ concurrency:
   # PR open and close use the same group, allowing only one at a time
   group: pr-${{ github.workflow }}-${{ github.event.number }}
   cancel-in-progress: true
+
 permissions: {}
+
 jobs:
   # https://github.com/bcgov/actions/tree/main/builder
   builds:
@@ -18,8 +20,6 @@ jobs:
       contents: read # Required for repository access
       id-token: write # Required for OIDC token generation
       packages: write # Required for pushing images
-    outputs:
-      digest: ${{ steps.builds.outputs.digest }}
     runs-on: ubuntu-24.04
     strategy:
       matrix:
@@ -44,17 +44,17 @@ jobs:
           triggers: ${{ matrix.triggers }}
 
   deploys:
-    name: Deploys
-    permissions:
-      contents: read # Required for repository access
+    name: Deploys (${{ github.event.number }})
     needs: [builds]
     uses: ./.github/workflows/.deploy.yml
     secrets:
+      db_password: ${{ secrets.DB_PASSWORD }}
       oc_namespace: ${{ vars.OC_NAMESPACE }}
       oc_token: ${{ secrets.OC_TOKEN }}
     with:
-      db_user: app-${{ github.event.number }}
-      params: --set global.secrets.persist=false
+      target: ${{ github.event.number }}
+      tag: ${{ github.event.pull_request.head.sha }}
+      triggers: ('backend-java/' 'common/' '.github/workflows/')
 
   results:
     name: PR Results

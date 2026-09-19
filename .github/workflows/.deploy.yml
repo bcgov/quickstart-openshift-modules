@@ -1,180 +1,100 @@
-name: .Deploys
+name: .Deploy
 
 on:
   workflow_call:
     inputs:
-      atomic:
-        description: Atomic deployment?  That means fail all or nothing
-        default: false
-        required: false
-        type: boolean
-      directory:
-        description: Chart directory
-        default: "charts/app"
-        required: false
-        type: string
       environment:
-        description: Environment name; omit for PRs
-        required: false
+        description: GitHub/OpenShift environment
+        default: ""
         type: string
-      oc_server:
-        default: https://api.silver.devops.gov.bc.ca:6443
-        description: OpenShift server
-        required: false
-        type: string
-      params:
-        description: Extra parameters to pass to helm upgrade
-        required: false
+      target:
+        description: Deployment target; usually PR number, test or prod
+        default: ${{ github.event.number }}
         type: string
       tag:
-        description: Specify a tag to deploy; defaults to PR number
-        required: false
+        description: Container tag
+        default: ${{ github.event.number }}
         type: string
       triggers:
-        description: Paths used to trigger a deployment; e.g. ('./backend/' './frontend/)
-        required: false
+        description: Triggers for deployment
+        default: ""
         type: string
-      db_user:
-        description: The database user
-        required: false
-        default: "app"
-        type: string
-      debug:
-        description: Debug mode
-        default: false
-        required: false
-        type: boolean
-
-      ### Usually a bad idea / not recommended
-      timeout-minutes:
-        description: "Timeout minutes"
-        default: 30
-        required: false
-        type: number
-      values:
-        description: "Values file"
-        default: "values.yaml"
-        required: false
-        type: string
-    outputs:
-      tag:
-        description: "Which tag was used for deployment?"
-        value: ${{ jobs.deploy.outputs.tag }}
-      triggered:
-        description: "Has a deployment has been triggered?"
-        value: ${{ jobs.deploy.outputs.triggered }}
 
     secrets:
+      db_password:
+        description: Database password
+        required: true
       oc_namespace:
         description: OpenShift namespace
         required: true
       oc_token:
         description: OpenShift token
         required: true
+    outputs:
+      triggered:
+        description: Has deployment been triggered?
+        value: ${{ jobs.init.outputs.triggered }}
 
 permissions: {}
 
 jobs:
-  deploy:
-    name: Stack
+  init:
+    name: Deploy (init)
     environment: ${{ inputs.environment }}
-    runs-on: ubuntu-24.04
     outputs:
-      tag: ${{ inputs.tag || steps.pr.outputs.pr }}
       triggered: ${{ steps.deploy.outputs.triggered }}
-    timeout-minutes: ${{ inputs.timeout-minutes }}
+    runs-on: ubuntu-24.04
     steps:
-      - uses: bcgov/actions-openshift/crunchy@75454b2b33edf37135f6f167775c77a3414207f6 # v0.3.0
-        name: Deploy Crunchy
-        id: deploy_crunchy
-        with:
-          oc_namespace: ${{ secrets.oc_namespace }}
-          oc_token: ${{ secrets.oc_token }}
-          environment: ${{ inputs.environment }}
-          values_file: charts/crunchy/values.yml
-          triggers: ${{ inputs.triggers }}
-      # Variables
-      - if: inputs.tag  == ''
-        id: pr
-        uses: bcgov/action-get-pr@3931962bf13b3f4702d0013ec7c836f752ff1a3b # v0.3.0
-
-      - id: vars
-        run: |
-          # Vars: tag and release
-
-          # Tag defaults to PR number, but can be overridden by inputs.tag
-          tag=${{ inputs.tag || steps.pr.outputs.pr }}
-
-          # Release name includes run numbers to ensure uniqueness
-          release=${{ github.event.repository.name }}-${{ inputs.environment || steps.pr.outputs.pr || inputs.tag }}
-
-          # version, to support helm packaging for non-pr based releases (workflow_dispatch). default to 1.0.0+github run number
-          version=1.0.0+${{ github.run_number }}
-
-            # Summary
-          echo "tag=${tag}"
-          echo "release=${release}"
-          echo "version=${version}"
-
-          # Output
-          echo "tag=${tag}" >> $GITHUB_OUTPUT
-          echo "release=${release}" >> $GITHUB_OUTPUT
-          echo "version=${version}" >> $GITHUB_OUTPUT
-
-      - name: Stop pre-existing deployments on PRs (status = pending-upgrade)
-        if: github.event_name == 'pull_request'
-        uses: bcgov/actions-openshift/oc-runner@75454b2b33edf37135f6f167775c77a3414207f6 # v0.3.0
-        with:
-          oc_namespace: ${{ secrets.oc_namespace }}
-          oc_token: ${{ secrets.oc_token }}
-          oc_server: ${{ vars.oc_server }}
-          triggers: ${{ inputs.triggers }}
-          commands: |
-            # Interrupt any previous deployments (PR only)
-            PREVIOUS=$(helm status ${{ steps.vars.outputs.release }} -o json | jq .info.status || true)
-            if [[ ${PREVIOUS} =~ pending ]]; then
-              echo "Rollback triggered"
-              helm rollback ${{ steps.vars.outputs.release }} || \
-                helm uninstall ${{ steps.vars.outputs.release }}
-            fi
-
-      - uses: actions/checkout@v6
-      - name: Debug Values File
-        if: inputs.debug
-        run: ls -l charts/crunchy/values.yml
-      - name: Helm Deploy
+      - uses: bcgov/action-deployer-openshift@27a85b7b157bfc9c3c9bf0aca53bcd288d4d2506 # v4.2.1
         id: deploy
-        uses: bcgov/actions-openshift/oc-runner@75454b2b33edf37135f6f167775c77a3414207f6 # v0.3.0
+        env:
+          DB_PASSWORD: ${{ secrets.db_password }}
         with:
+          file: common/openshift.init.yml
           oc_namespace: ${{ secrets.oc_namespace }}
-          oc_token: ${{ secrets.oc_token }}
           oc_server: ${{ vars.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
+          # Secret + NetworkPolicies: create if missing. Postgres ignores
+          # POSTGRES_PASSWORD after first boot; restamping the Secret desyncs Flyway.
+          # New NetworkPolicy names still apply; existing NP specs do not update.
+          overwrite: false
+          parameters: -p DB_PASSWORD="$DB_PASSWORD"
+            -p ZONE="${{ inputs.target }}"
+            -p NAME="${{ github.event.repository.name }}"
           triggers: ${{ inputs.triggers }}
-          ref: ${{ github.ref }}
-          commands: |
-            # Deploy
+          debug: true
 
-            # If directory provided, cd to it
-            [ -z "${{ inputs.directory }}" ]|| cd ${{ inputs.directory }}
-
-            # Helm package
-            sed -i 's/^name:.*/name: ${{ github.event.repository.name }}/' Chart.yaml
-            helm package -u . --app-version="tag-${{ steps.vars.outputs.tag }}_run-${{ github.run_number }}" --version=${{ steps.pr.outputs.pr || steps.vars.outputs.version }}
-            # print the values.yaml file to see the values being used
-            # Helm upgrade/rollout
-            helm upgrade \
-              --set-string global.repository=${{ github.repository }} \
-              --set-string global.tag="${{ steps.vars.outputs.tag }}" \
-              --set-string global.config.databaseUser="${{ inputs.db_user }}" \
-              --set-string global.databaseAlias="${{ steps.deploy_crunchy.outputs.release }}-crunchy" \
-              ${{ inputs.params }} \
-              --install --wait ${{ inputs.atomic && '--atomic' || '' }} ${{ steps.vars.outputs.release }} \
-              --timeout ${{ inputs.timeout-minutes }}m \
-              --values ${{ inputs.values }} \
-              ./${{ github.event.repository.name }}-${{ steps.pr.outputs.pr || steps.vars.outputs.version }}.tgz
-
-            # Helm release history
-            helm history ${{ steps.vars.outputs.release }}
-
-            # Completed pod cleanup
-            oc delete po --field-selector=status.phase==Succeeded || true
+  deploy:
+    name: Deploy (${{ matrix.name }})
+    environment: ${{ inputs.environment }}
+    needs: [init]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        name: [database, backend-java]
+        include:
+          - name: database
+            file: common/openshift.database.yml
+            overwrite: false
+            parameters: -p DB_PVC_SIZE="256Mi"
+          - name: backend-java
+            file: backend-java/openshift.deploy.yml
+            overwrite: true
+            parameters: -p IMAGE_TAG="${{ inputs.tag }}"
+    outputs:
+      triggered: ${{ steps.deploy.outputs.triggered }}
+    steps:
+      - uses: bcgov/action-deployer-openshift@27a85b7b157bfc9c3c9bf0aca53bcd288d4d2506 # v4.2.1
+        id: deploy
+        with:
+          file: ${{ matrix.file }}
+          oc_namespace: ${{ secrets.oc_namespace }}
+          oc_server: ${{ vars.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
+          overwrite: ${{ matrix.overwrite }}
+          debug: true
+          parameters: -p ZONE="${{ inputs.target }}"
+            -p NAME="${{ github.event.repository.name }}"
+            ${{ matrix.parameters }}
+          triggers: ${{ inputs.triggers }}
