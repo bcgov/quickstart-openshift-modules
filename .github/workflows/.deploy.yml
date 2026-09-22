@@ -21,9 +21,6 @@ on:
         type: string
 
     secrets:
-      db_password:
-        description: Database password
-        required: true
       oc_namespace:
         description: OpenShift namespace
         required: true
@@ -45,10 +42,8 @@ jobs:
       triggered: ${{ steps.deploy.outputs.triggered }}
     runs-on: ubuntu-24.04
     steps:
-      - uses: bcgov/action-deployer-openshift@27a85b7b157bfc9c3c9bf0aca53bcd288d4d2506 # v4.2.1
+      - uses: bcgov/actions-openshift/deployer@75454b2b33edf37135f6f167775c77a3414207f6 # v0.3.0
         id: deploy
-        env:
-          DB_PASSWORD: ${{ secrets.db_password }}
         with:
           file: common/openshift.init.yml
           oc_namespace: ${{ secrets.oc_namespace }}
@@ -58,9 +53,9 @@ jobs:
           # POSTGRES_PASSWORD after first boot; restamping the Secret desyncs Flyway.
           # New NetworkPolicy names still apply; existing NP specs do not update.
           overwrite: false
-          parameters: -p DB_PASSWORD="$DB_PASSWORD"
-            -p ZONE="${{ inputs.target }}"
+          parameters: -p ZONE="${{ inputs.target }}"
             -p NAME="${{ github.event.repository.name }}"
+            -p COMPONENT="backend-java"
           triggers: ${{ inputs.triggers }}
           debug: true
 
@@ -82,10 +77,11 @@ jobs:
             file: backend-java/openshift.deploy.yml
             overwrite: true
             parameters: -p IMAGE_TAG="${{ inputs.tag }}"
+              -p COMPONENT="backend-java"
     outputs:
       triggered: ${{ steps.deploy.outputs.triggered }}
     steps:
-      - uses: bcgov/action-deployer-openshift@27a85b7b157bfc9c3c9bf0aca53bcd288d4d2506 # v4.2.1
+      - uses: bcgov/actions-openshift/deployer@75454b2b33edf37135f6f167775c77a3414207f6 # v0.3.0
         id: deploy
         with:
           file: ${{ matrix.file }}

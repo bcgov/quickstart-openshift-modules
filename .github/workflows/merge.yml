@@ -42,7 +42,6 @@ jobs:
     needs: [vars]
     uses: ./.github/workflows/.deploy.yml
     secrets:
-      db_password: ${{ secrets.DB_PASSWORD }}
       oc_namespace: ${{ secrets.OC_NAMESPACE }}
       oc_token: ${{ secrets.OC_TOKEN }}
     with:
@@ -57,7 +56,6 @@ jobs:
     needs: [deploy-test, vars]
     uses: ./.github/workflows/.deploy.yml
     secrets:
-      db_password: ${{ secrets.DB_PASSWORD }}
       oc_namespace: ${{ secrets.OC_NAMESPACE }}
       oc_token: ${{ secrets.OC_TOKEN }}
     with:

@@ -45,10 +45,11 @@ jobs:
 
   deploys:
     name: Deploys (${{ github.event.number }})
+    permissions:
+      contents: read
     needs: [builds]
     uses: ./.github/workflows/.deploy.yml
     secrets:
-      db_password: ${{ secrets.DB_PASSWORD }}
       oc_namespace: ${{ vars.OC_NAMESPACE }}
       oc_token: ${{ secrets.OC_TOKEN }}
     with:
