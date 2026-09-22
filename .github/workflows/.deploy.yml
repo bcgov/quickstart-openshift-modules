@@ -21,6 +21,9 @@ on:
         type: string
 
     secrets:
+      db_password:
+        description: Database password (required except on pull_request)
+        required: false
       oc_namespace:
         description: OpenShift namespace
         required: true
@@ -42,8 +45,31 @@ jobs:
       triggered: ${{ steps.deploy.outputs.triggered }}
     runs-on: ubuntu-24.04
     steps:
+      - name: Database password
+        id: db
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DB_PASSWORD: ${{ secrets.db_password }}
+        run: |
+          if [ "${EVENT_NAME}" = "pull_request" ]; then
+            password="$(openssl rand -hex 16)"
+            if [ -z "${password}" ]; then
+              echo "::error::openssl failed to generate a PR database password"
+              exit 1
+            fi
+          else
+            if [ -z "${DB_PASSWORD}" ]; then
+              echo "::error::db_password GitHub secret is required for ${EVENT_NAME} deploys"
+              exit 1
+            fi
+            password="${DB_PASSWORD}"
+          fi
+          echo "::add-mask::${password}"
+          echo "password=${password}" >> "${GITHUB_OUTPUT}"
       - uses: bcgov/actions-openshift/deployer@75454b2b33edf37135f6f167775c77a3414207f6 # v0.3.0
         id: deploy
+        env:
+          DB_PASSWORD: ${{ steps.db.outputs.password }}
         with:
           file: common/openshift.init.yml
           oc_namespace: ${{ secrets.oc_namespace }}
@@ -53,7 +79,8 @@ jobs:
           # POSTGRES_PASSWORD after first boot; restamping the Secret desyncs Flyway.
           # New NetworkPolicy names still apply; existing NP specs do not update.
           overwrite: false
-          parameters: -p ZONE="${{ inputs.target }}"
+          parameters: -p DB_PASSWORD="$DB_PASSWORD"
+            -p ZONE="${{ inputs.target }}"
             -p NAME="${{ github.event.repository.name }}"
             -p COMPONENT="backend-java"
           triggers: ${{ inputs.triggers }}

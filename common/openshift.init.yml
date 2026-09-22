@@ -14,9 +14,8 @@ parameters:
     description: Deployment zone, e.g. pr-### or prod
     required: true
   - name: DB_PASSWORD
-    description: Password for the PostgreSQL connection user. Generated on first process; overwrite=false keeps it.
-    from: "[a-zA-Z0-9]{16}"
-    generate: expression
+    description: Password for the PostgreSQL connection user. Caller must pass it; never generated in this template.
+    required: true
 objects:
   - apiVersion: v1
     kind: Secret
