@@ -68,8 +68,6 @@ jobs:
           echo "password=${password}" >> "${GITHUB_OUTPUT}"
       - uses: bcgov/actions-openshift/deployer@75454b2b33edf37135f6f167775c77a3414207f6 # v0.3.0
         id: deploy
-        env:
-          DB_PASSWORD: ${{ steps.db.outputs.password }}
         with:
           file: common/openshift.init.yml
           oc_namespace: ${{ secrets.oc_namespace }}
@@ -79,10 +77,9 @@ jobs:
           # POSTGRES_PASSWORD after first boot; restamping the Secret desyncs Flyway.
           # New NetworkPolicy names still apply; existing NP specs do not update.
           overwrite: false
-          parameters: -p DB_PASSWORD="$DB_PASSWORD"
+          parameters: -p DB_PASSWORD="${{ steps.db.outputs.password }}"
             -p ZONE="${{ inputs.target }}"
             -p NAME="${{ github.event.repository.name }}"
-            -p COMPONENT="backend-java"
           triggers: ${{ inputs.triggers }}
           debug: true
 
@@ -94,7 +91,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        name: [database, backend-java]
+        name: [database, backend-java, backend-py]
         include:
           - name: database
             file: common/openshift.database.yml
@@ -105,6 +102,12 @@ jobs:
             overwrite: true
             parameters: -p IMAGE_TAG="${{ inputs.tag }}"
               -p COMPONENT="backend-java"
+          - name: backend-py
+            file: backend-py/openshift.deploy.yml
+            overwrite: true
+            parameters: -p IMAGE_TAG="${{ inputs.tag }}"
+              -p COMPONENT="backend-py"
+              -p MIGRATIONS="migrations-py"
     outputs:
       triggered: ${{ steps.deploy.outputs.triggered }}
     steps:

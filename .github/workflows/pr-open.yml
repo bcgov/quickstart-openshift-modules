@@ -55,7 +55,7 @@ jobs:
     with:
       target: ${{ github.event.number }}
       tag: ${{ github.event.pull_request.head.sha }}
-      triggers: ('backend-java/' 'common/' '.github/workflows/')
+      triggers: ('backend-java/' 'backend-py/' 'common/' '.github/workflows/')
 
   results:
     name: PR Results

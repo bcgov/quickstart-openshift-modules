@@ -4,9 +4,6 @@ parameters:
   - name: NAME
     description: Product name
     required: true
-  - name: COMPONENT
-    description: Backend component label used by NetworkPolicy selectors
-    value: backend
   - name: PG_DATABASE
     description: Postgres database name
     value: app
@@ -30,13 +27,13 @@ objects:
   - apiVersion: networking.k8s.io/v1
     kind: NetworkPolicy
     metadata:
-      name: ${NAME}-${ZONE}-${COMPONENT}-ingress
+      name: ${NAME}-${ZONE}-ingress
       labels:
         app: ${NAME}-${ZONE}
     spec:
       podSelector:
         matchLabels:
-          deployment: ${NAME}-${ZONE}-${COMPONENT}
+          app: ${NAME}-${ZONE}
       ingress:
         - from:
             - namespaceSelector:
