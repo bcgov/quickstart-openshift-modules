@@ -11,14 +11,16 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Image tag set to deploy; e.g. PR number or prod"
+        description: "Image tag to deploy; e.g. PR number or prod"
         type: string
         default: "prod"
 
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: true
+
 permissions: {}
+
 jobs:
   vars:
     name: Set Variables
@@ -32,24 +34,27 @@ jobs:
       - name: PR Number
         id: pr
         uses: bcgov/action-get-pr@3931962bf13b3f4702d0013ec7c836f752ff1a3b # v0.3.0
+
   deploy-test:
     name: Deploy (TEST)
     permissions:
       contents: read # Required for repository access
+    needs: [vars]
     uses: ./.github/workflows/.deploy.yml
     secrets:
+      db_password: ${{ secrets.db_password }}
       oc_namespace: ${{ secrets.OC_NAMESPACE }}
       oc_token: ${{ secrets.OC_TOKEN }}
     with:
       environment: test
-      db_user: appproxy
-      tag: ${{ inputs.tag }}
+      target: test
+      tag: ${{ inputs.tag || needs.vars.outputs.pr }}
 
   integration-tests:
-    needs: [deploy-test]
     name: Integration Tests for APIs
+    needs: [deploy-test]
     permissions:
-      contents: read # Required for checkout
+      contents: read
     defaults:
       run:
         working-directory: integration-tests
@@ -59,33 +64,20 @@ jobs:
         name: [quarkus, fastapi]
         include:
           - name: quarkus
-            baseUrl: https://quickstart-openshift-backends-test-backend-java.apps.silver.devops.gov.bc.ca
+            baseUrl: https://${{ github.event.repository.name }}-test-backend-java.apps.silver.devops.gov.bc.ca
           - name: fastapi
-            baseUrl: https://quickstart-openshift-backends-test-backend-py.apps.silver.devops.gov.bc.ca
+            baseUrl: https://${{ github.event.repository.name }}-test-backend-py.apps.silver.devops.gov.bc.ca
     steps:
       - uses: actions/checkout@v6
-        name: Checkout
-      - name: Cache node modules
-        id: cache-npm
-        uses: actions/cache@v5
-        env:
-          cache-name: cache-node-modules
+      - uses: actions/setup-node@v5
         with:
-          # npm cache files are stored in `~/.npm` on Linux/macOS
-          path: ~/.npm
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
-      - if: ${{ steps.cache-npm.outputs.cache-hit != 'true' }}
-        name: List the state of node modules
-        continue-on-error: true
-        run: npm list
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: integration-tests/package-lock.json
       - name: Install dependencies
         run: npm ci
       - name: Run integration tests
-        run: BASE_URL=${{ matrix.baseUrl }} API_NAME=${{ matrix.name }}  node src/main.js
+        run: BASE_URL=${{ matrix.baseUrl }} API_NAME=${{ matrix.name }} node src/main.js
 
   deploy-prod:
     name: Deploy (prod)
@@ -94,17 +86,13 @@ jobs:
     needs: [integration-tests, vars]
     uses: ./.github/workflows/.deploy.yml
     secrets:
+      db_password: ${{ secrets.db_password }}
       oc_namespace: ${{ secrets.OC_NAMESPACE }}
       oc_token: ${{ secrets.OC_TOKEN }}
     with:
       environment: prod
-      db_user: appproxy
-      params: --set global.autoscaling=true
-        --set backend-py.pdb.enabled=true
-        --set backend-java.pdb.enabled=true
-        --set backend-py.deploymentStrategy=RollingUpdate
-        --set backend-java.deploymentStrategy=RollingUpdate
-      tag: ${{ inputs.tag }}
+      target: prod
+      tag: ${{ inputs.tag || needs.vars.outputs.pr }}
 
   promote:
     name: Promote Images
@@ -114,7 +102,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        package: [backend-py, backend-java, migrations-py]
+        package: [backend-java, backend-py, migrations-py]
     timeout-minutes: 1
     steps:
       - uses: shrink/actions-docker-registry-tag@e6aaef25c595b6e0edd18bf4c7dbfea3abd43299 # v5
