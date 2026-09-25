@@ -9,11 +9,6 @@ on:
       - ".graphics/**"
       - "!.github/workflows/**"
   workflow_dispatch:
-    inputs:
-      tag:
-        description: "Image tag to deploy; e.g. PR number or prod"
-        type: string
-        default: "prod"
 
 concurrency:
   group: ${{ github.workflow }}
@@ -39,7 +34,6 @@ jobs:
       # Resolve the image digest built for this commit (squash merges walk back to the PR build)
       - name: Resolve image
         id: tracker
-        if: ${{ !inputs.tag }}
         uses: bcgov/actions/image-tracker@4026bfd276b8a5839029106099b13edfb594b2c3 # v0.8.0
         with:
           package: ${{ matrix.package }}
@@ -47,7 +41,6 @@ jobs:
 
       # Tag that digest with the merge commit SHA; deploys and promotion use this tag
       - name: Tag image with commit SHA
-        if: ${{ !inputs.tag }}
         uses: shrink/actions-docker-registry-tag@e6aaef25c595b6e0edd18bf4c7dbfea3abd43299 # v5
         with:
           registry: ghcr.io
@@ -68,7 +61,7 @@ jobs:
     with:
       environment: test
       target: test
-      tag: ${{ inputs.tag || github.sha }}
+      tag: ${{ github.sha }}
 
   integration-tests:
     name: Integration Tests for APIs
@@ -112,7 +105,7 @@ jobs:
     with:
       environment: prod
       target: prod
-      tag: ${{ inputs.tag || github.sha }}
+      tag: ${{ github.sha }}
 
   promote:
     name: Promote Images
@@ -129,5 +122,5 @@ jobs:
         with:
           registry: ghcr.io
           repository: ${{ github.repository }}/${{ matrix.package }}
-          target: ${{ inputs.tag || github.sha }}
+          target: ${{ github.sha }}
           tags: prod
