@@ -5,7 +5,7 @@ parameters:
     description: Module name
     required: true
   - name: COMPONENT
-    description: Component name
+    description: Component name; also the image name in the registry
     value: backend
   - name: ZONE
     description: Deployment zone, e.g. pr-### or prod
@@ -31,12 +31,10 @@ parameters:
     value: "25m"
   - name: MEMORY_REQUEST
     value: "50Mi"
-  - name: CPU_LIMIT
-    value: "75m"
   - name: MEMORY_LIMIT
-    value: "150Mi"
+    value: "2Gi"
   - name: LOG_LEVEL
-    description: Application log level (debug|info|warn|error)
+    description: Application log level (debug|info|warning|error)
     value: "info"
 objects:
   - apiVersion: apps/v1
@@ -46,13 +44,16 @@ objects:
         app: ${NAME}-${ZONE}
       name: ${NAME}-${ZONE}-${COMPONENT}
     spec:
+      # replicas omitted: the HPA owns it, and oc apply must not reset it
+      revisionHistoryLimit: 3
       selector:
         matchLabels:
           deployment: ${NAME}-${ZONE}-${COMPONENT}
+      # Surge before terminating so rollouts never drop below the HPA's replica count
       strategy:
         type: RollingUpdate
         rollingUpdate:
-          maxUnavailable: 1
+          maxUnavailable: 0
           maxSurge: 1
       template:
         metadata:
@@ -60,6 +61,9 @@ objects:
             app: ${NAME}-${ZONE}
             deployment: ${NAME}-${ZONE}-${COMPONENT}
         spec:
+          # No Kubernetes API access or per-Service env vars needed
+          automountServiceAccountToken: false
+          enableServiceLinks: false
           terminationGracePeriodSeconds: 30
           affinity:
             podAntiAffinity:
@@ -78,12 +82,10 @@ objects:
                 - name: http
                   containerPort: 3000
               env:
-                - name: LOG_LEVEL
+                - name: QUARKUS_LOG_LEVEL
                   value: ${LOG_LEVEL}
                 - name: POSTGRES_HOST
                   value: ${NAME}-${ZONE}-database
-                - name: POSTGRES_PORT
-                  value: "5432"
                 - name: POSTGRES_DATABASE
                   valueFrom:
                     secretKeyRef:
@@ -99,12 +101,12 @@ objects:
                     secretKeyRef:
                       name: ${NAME}-${ZONE}-database
                       key: database-password
+              # Burstable: no CPU limit (BC Gov norm) so the pod can burst instead of being throttled
               resources:
                 requests:
                   cpu: ${CPU_REQUEST}
                   memory: ${MEMORY_REQUEST}
                 limits:
-                  cpu: ${CPU_LIMIT}
                   memory: ${MEMORY_LIMIT}
               securityContext:
                 allowPrivilegeEscalation: false
@@ -136,10 +138,11 @@ objects:
                 periodSeconds: 10
                 failureThreshold: 3
           volumes:
+            # tmpfs counts against the memory limit; keep sizeLimit below it
             - name: tmp
               emptyDir:
                 medium: Memory
-                sizeLimit: 256Mi
+                sizeLimit: 64Mi
   - apiVersion: v1
     kind: Service
     metadata:
@@ -231,6 +234,8 @@ objects:
       name: ${NAME}-${ZONE}-${COMPONENT}
     spec:
       maxUnavailable: 1
+      # Let node drains evict not-ready (e.g. crash-looping) pods instead of blocking on the budget
+      unhealthyPodEvictionPolicy: AlwaysAllow
       selector:
         matchLabels:
           deployment: ${NAME}-${ZONE}-${COMPONENT}
