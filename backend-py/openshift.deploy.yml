@@ -6,7 +6,7 @@ parameters:
     required: true
   - name: COMPONENT
     description: Component name; also the image name in the registry
-    value: backend-py
+    value: backend
   - name: ZONE
     description: Deployment zone, e.g. pr-### or prod
     required: true
@@ -15,7 +15,7 @@ parameters:
     required: true
   - name: MIGRATIONS
     description: Flyway migrations image name in the same registry/org/repo
-    value: migrations-py
+    value: migrations
   - name: REGISTRY
     description: Container registry to import from
     value: ghcr.io

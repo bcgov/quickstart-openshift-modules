@@ -6,7 +6,7 @@ parameters:
     required: true
   - name: COMPONENT
     description: Component name; also the image name in the registry
-    value: backend-java
+    value: backend
   - name: ZONE
     description: Deployment zone, e.g. pr-### or prod
     required: true

@@ -101,10 +101,13 @@ jobs:
             file: backend-java/openshift.deploy.yml
             overwrite: true
             parameters: -p IMAGE_TAG="${{ inputs.tag }}"
+              -p COMPONENT="backend-java"
           - name: backend-py
             file: backend-py/openshift.deploy.yml
             overwrite: true
             parameters: -p IMAGE_TAG="${{ inputs.tag }}"
+              -p COMPONENT="backend-py"
+              -p MIGRATIONS="migrations-py"
     outputs:
       triggered: ${{ steps.deploy.outputs.triggered }}
     steps:
