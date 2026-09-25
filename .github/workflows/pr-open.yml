@@ -34,7 +34,7 @@ jobs:
             build_context: ./backend-py/db
             build_file: ./backend-py/db/Dockerfile
     steps:
-      - uses: bcgov/actions/builder@c4694d429e6c8025974ba383f6f26ff8a41f7755 # v0.7.1
+      - uses: bcgov/actions/builder@4026bfd276b8a5839029106099b13edfb594b2c3 # v0.8.0
         id: builds
         with:
           build_context: ${{ matrix.build_context }}
@@ -63,7 +63,7 @@ jobs:
     if: always()
     runs-on: ubuntu-24.04
     steps:
-      - uses: bcgov/actions/workflow-results@c4694d429e6c8025974ba383f6f26ff8a41f7755 # v0.7.1
+      - uses: bcgov/actions/workflow-results@4026bfd276b8a5839029106099b13edfb594b2c3 # v0.8.0
         with:
           needs: ${{ toJson(needs) }}
           title: "PR Results"

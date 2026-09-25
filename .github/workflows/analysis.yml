@@ -133,7 +133,7 @@ jobs:
     if: always()
     runs-on: ubuntu-24.04
     steps:
-      - uses: bcgov/actions/workflow-results@c4694d429e6c8025974ba383f6f26ff8a41f7755 # v0.7.1
+      - uses: bcgov/actions/workflow-results@4026bfd276b8a5839029106099b13edfb594b2c3 # v0.8.0
         with:
           needs: ${{ toJson(needs) }}
           title: "Analysis Results"
