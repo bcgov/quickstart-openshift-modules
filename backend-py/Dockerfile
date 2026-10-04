@@ -1,5 +1,5 @@
 # Use Python 3.14.1 base image and install uv
-FROM python:3.14.5-slim-bookworm AS build
+FROM python:3.14.8-slim-bookworm AS build
 
 # Install uv
 RUN pip install --no-cache-dir uv
@@ -30,7 +30,7 @@ COPY src ./src
 RUN uv sync --frozen --no-dev
 
 # Production stage
-FROM python:3.14.5-slim-bookworm AS deploy
+FROM python:3.14.8-slim-bookworm AS deploy
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
