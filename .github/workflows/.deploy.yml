@@ -43,7 +43,7 @@ jobs:
     environment: ${{ inputs.environment }}
     outputs:
       triggered: ${{ steps.deploy.outputs.triggered }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Database password
         id: db
@@ -87,7 +87,7 @@ jobs:
     name: Deploy (${{ matrix.name }})
     environment: ${{ inputs.environment }}
     needs: [init]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     strategy:
       matrix:

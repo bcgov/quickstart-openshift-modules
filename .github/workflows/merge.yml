@@ -19,7 +19,7 @@ permissions: {}
 jobs:
   vars:
     name: Resolve Images
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       packages: write
@@ -71,7 +71,7 @@ jobs:
     defaults:
       run:
         working-directory: integration-tests
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       matrix:
         name: [quarkus, fastapi]
@@ -81,10 +81,10 @@ jobs:
           - name: fastapi
             baseUrl: https://${{ github.event.repository.name }}-test-backend-py.apps.silver.devops.gov.bc.ca
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: integration-tests/package-lock.json
       - name: Install dependencies
@@ -110,7 +110,7 @@ jobs:
   promote:
     name: Promote Images
     needs: [deploy-prod, vars]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       packages: write
     strategy:

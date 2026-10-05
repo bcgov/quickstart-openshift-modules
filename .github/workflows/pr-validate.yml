@@ -12,7 +12,7 @@ jobs:
   validate:
     name: Validate PR
     if: (! github.event.pull_request.draft)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read          # Required for repository access
       pull-requests: write    # Required for commenting on PRs
@@ -27,7 +27,7 @@ jobs:
     name: Validate Results
     if: always()
     needs: [validate]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: bcgov/actions/workflow-results@4026bfd276b8a5839029106099b13edfb594b2c3 # v0.8.0
         with:
