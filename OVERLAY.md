@@ -33,7 +33,7 @@ Backstage software templates use built-in actions (`fetch:plain`, `fs:delete`) t
 ### Canonical Backstage Template Definition (`template.yaml`)
 
 ```yaml
-apiVersion: backstage.io/v1alpha1
+apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: quickstart-openshift-quarkus
@@ -53,9 +53,9 @@ spec:
           type: string
           description: Unique name for your service and OpenShift resources.
         owner:
-          title: Team Owner
+          title: GitHub Repository Owner
           type: string
-          description: GitHub team or group owning the service.
+          description: GitHub organization or user account where the repository will be created.
 
   steps:
     # 1. Fetch base quickstart repository scaffold
@@ -176,6 +176,11 @@ ls -la test-quickstart/backend
 # 4. Verify native container build
 podman build -t test-backend-native test-quickstart/backend
 
-# 5. Verify local compose configuration
+# 5. Apply the Java backend Compose definition from Section 4 to test-quickstart/docker-compose.yml
+# (Replace the default node backend service block with the Java service snippet)
+
+# 6. Verify local compose configuration and start services
 podman compose -f test-quickstart/docker-compose.yml config
+podman compose -f test-quickstart/docker-compose.yml up -d backend database
+curl -f http://localhost:3001/
 ```
