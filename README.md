@@ -16,6 +16,8 @@ Modular plug-ins for the [QuickStart for OpenShift](https://github.com/bcgov/qui
 
 When scaffolding with Backstage or manually swapping backends in `quickstart-openshift`, the chosen module (e.g., `backend-java/`) maps to the `backend/` directory of the target project, providing its source code, Dockerfile, and OpenShift deployment template (`openshift.deploy.yml`).
 
+For full details on the Backstage software template workflow, file compatibility contracts, and the standardized `docker-compose.yml` snippet, consult the [Backstage Overlay Contract](OVERLAY.md).
+
 ## Features
 
 * Cloud Native Java with Quarkus and GraalVM native images for minimal resource footprints
