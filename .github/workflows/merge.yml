@@ -54,7 +54,10 @@ jobs:
       contents: read # Required for repository access
     needs: [vars]
     uses: ./.github/workflows/.deploy.yml
-    secrets: inherit
+    secrets:
+      db_password: ${{ secrets.db_password }}
+      oc_namespace: ${{ secrets.OC_NAMESPACE }}
+      oc_token: ${{ secrets.OC_TOKEN }}
     with:
       environment: test
       target: test
