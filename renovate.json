@@ -4,5 +4,15 @@
   "extends": [
     "github>bcgov/renovate-config#2026.9.26"
   ],
-  "minimumReleaseAge": "0 days"
+  "minimumReleaseAge": "0 days",
+  "packageRules": [
+    {
+      "description": "Lock Eclipse Temurin to Java 21 LTS for backend-java development service",
+      "matchPackageNames": [
+        "eclipse-temurin",
+        "docker.io/library/eclipse-temurin"
+      ],
+      "allowedVersions": "<22"
+    }
+  ]
 }
