@@ -22,5 +22,5 @@ assignees: ''
 - [ ] Does what I have made have appropriate test coverage?
 - [ ] Documentation and/or scientific documentation exists and can be found
 - [ ] Peer Reviewed by 2 people on the team
-- [ ] Manual testing of all PRs in Dev and Prod
+- [ ] Manual testing of all PRs in Dev and Test
 - [ ] Merged
