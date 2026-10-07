@@ -100,7 +100,7 @@ services:
 
   backend-java:
     profiles: ["java", "all"]
-    image: docker.io/library/eclipse-temurin:21-jdk
+    image: docker.io/library/eclipse-temurin:27-jdk
     container_name: backend-java
     working_dir: /project
     entrypoint: ./mvnw quarkus:dev -Dquarkus.http.host=0.0.0.0
