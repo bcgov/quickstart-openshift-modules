@@ -24,4 +24,7 @@ jobs:
       oc_token: ${{ secrets.OC_TOKEN }}
     with:
       cleanup: label
-      packages: backend-java backend-py migrations-py
+      packages: |
+        backend-java
+        backend-py
+        migrations-py
