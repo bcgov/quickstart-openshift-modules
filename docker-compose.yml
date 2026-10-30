@@ -35,7 +35,7 @@ x-python-vars: &python-vars
 
 services:
   database:
-    image: postgres:17
+    image: postgres:18
     container_name: database
     environment:
       <<: *postgres-vars
