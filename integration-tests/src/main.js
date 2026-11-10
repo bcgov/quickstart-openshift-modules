@@ -1,11 +1,11 @@
 import dotenv from "dotenv";
-import axios from "axios";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import assert from "node:assert/strict";
 
 import pkg from "lodash";
+import { request } from "./http.js";
 
 dotenv.config();
 
@@ -34,13 +34,12 @@ async function performEachMethod(BASE_URL, testCase, method, id) {
   } else if (method === "PATCH") {
     payload = testCase.data?.patch_payload;
   }
-  const response = await axios({
+  const response = await request(url, {
     method: method,
-    url: url,
     headers: {
       ...testCase.headers
     },
-    data: payload
+    body: payload
   });
   console.info(`Response for ${method} ${url} : ${response.status}`);
   const methodAssertion = testCase.assertions.find(assertion => assertion.method === method);

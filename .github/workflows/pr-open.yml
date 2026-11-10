@@ -59,11 +59,64 @@ jobs:
         backend-java/
         backend-py/
         common/
+        integration-tests/
         .github/workflows/
+
+  integration-unit:
+    name: Integration Tests (unit)
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: integration-tests
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: integration-tests/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  integration-tests:
+    name: Integration Tests (${{ matrix.name }})
+    needs: [deploys]
+    if: needs.deploys.outputs.triggered == 'true'
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: integration-tests
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        name: [quarkus, fastapi]
+        include:
+          - name: quarkus
+            baseUrl: https://${{ github.event.repository.name }}-${{ github.event.number }}-backend-java.apps.silver.devops.gov.bc.ca
+          - name: fastapi
+            baseUrl: https://${{ github.event.repository.name }}-${{ github.event.number }}-backend-py.apps.silver.devops.gov.bc.ca
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: integration-tests/package-lock.json
+      - run: npm ci
+      - name: Run integration tests
+        env:
+          BASE_URL: ${{ matrix.baseUrl }}
+          API_NAME: ${{ matrix.name }}
+        run: node src/main.js
 
   results:
     name: PR Results
-    needs: [builds, deploys]
+    needs: [builds, deploys, integration-unit, integration-tests]
     if: always()
     runs-on: ubuntu-26.04
     steps:
