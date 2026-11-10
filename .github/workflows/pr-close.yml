@@ -18,7 +18,7 @@ jobs:
     permissions:
       packages: write # Required for promoting images during PR cleanup
       contents: read # Required for repository access
-    uses: bcgov/actions-openshift/.github/workflows/.pr-close.yml@f5322ce1729320d15d523877ad57b613816d1ba3 # v0.8.0
+    uses: bcgov/actions-openshift/.github/workflows/.pr-close.yml@a7a039ba45f9635c0bdbcc6b4cdbd2555811e100 # v0.8.0
     secrets:
       oc_namespace: ${{ vars.OC_NAMESPACE }}
       oc_token: ${{ secrets.OC_TOKEN }}
