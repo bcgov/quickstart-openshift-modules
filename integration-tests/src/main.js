@@ -21,9 +21,9 @@ async function performEachMethod(BASE_URL, testCase, method, id) {
   let url = BASE_URL + testCase.path;
   if (id && (method === "GET" || method === "PUT" || method === "PATCH" || method === "DELETE")) {
     if (url.endsWith("/") === false) {
-      url = url + "/" + id;
+      url = url + "/" + encodeURIComponent(id);
     } else {
-      url = url + id;
+      url = url + encodeURIComponent(id);
     }
   }
   let payload;
