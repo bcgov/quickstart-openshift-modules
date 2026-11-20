@@ -34,7 +34,7 @@ jobs:
             build_context: ./backend-py/db
             build_file: ./backend-py/db/Dockerfile
     steps:
-      - uses: bcgov/actions/builder@6c8ac0469fcf0d826533bc526c90119b8f149884 # v0.13.0
+      - uses: bcgov/actions/builder@acc058abf85bb183dad21b839a92a40a4ff47af3 # v0.14.0
         id: builds
         with:
           context: ${{ matrix.build_context }}
@@ -120,6 +120,6 @@ jobs:
     if: always()
     runs-on: ubuntu-26.04
     steps:
-      - uses: bcgov/actions/workflow-results@6c8ac0469fcf0d826533bc526c90119b8f149884 # v0.13.0
+      - uses: bcgov/actions/workflow-results@acc058abf85bb183dad21b839a92a40a4ff47af3 # v0.14.0
         with:
           needs: ${{ toJson(needs) }}
