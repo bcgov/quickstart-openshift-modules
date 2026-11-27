@@ -66,7 +66,7 @@ jobs:
           fi
           echo "::add-mask::${password}"
           echo "password=${password}" >> "${GITHUB_OUTPUT}"
-      - uses: bcgov/actions-openshift/deployer@47805d2fc4e919382757c1fbeb68d39313abe64f # v0.11.0
+      - uses: bcgov/actions-openshift/deployer@b2757e12d08b7d3bf2c5df7cd58b4cdaf6b3ea71 # v0.11.1
         id: deploy
         with:
           file: common/openshift.init.yml
@@ -111,7 +111,7 @@ jobs:
     outputs:
       triggered: ${{ steps.deploy.outputs.triggered }}
     steps:
-      - uses: bcgov/actions-openshift/deployer@47805d2fc4e919382757c1fbeb68d39313abe64f # v0.11.0
+      - uses: bcgov/actions-openshift/deployer@b2757e12d08b7d3bf2c5df7cd58b4cdaf6b3ea71 # v0.11.1
         id: deploy
         with:
           file: ${{ matrix.file }}
